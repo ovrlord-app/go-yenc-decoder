@@ -1,0 +1,4 @@
+gopkg.in/option.v0 v0.0.0-20220910000000-360f43518c40 h1:F5GXi2F4Ay44oV5rJ6BbsOZl4nYrb1Fv7w14KeTVj3g=
+gopkg.in/option.v0 v0.0.0-20220910000000-360f43518c40/go.mod h1:0NoLVhT/Lh19J02e6eFvBzkP8s+twOpvDEnu3HLFAWw=
+gopkg.in/ringbuffer.v0 v0.0.0-20220918000000-5de8faa4e64f h1:7mtO14VQRG/C1la1TuXDn47IAysD4ewATDo/Jl+Pc+4=
+gopkg.in/ringbuffer.v0 v0.0.0-20220918000000-5de8faa4e64f/go.mod h1:3TghidZ176UqWs/nFAHokh9C/3op/7yeG+a+AuVgeLs=

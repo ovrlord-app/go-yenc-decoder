@@ -1,0 +1,20 @@
+# https://taskfile.dev
+
+version: '3'
+
+tasks:
+  install:
+    cmds:
+      - go mod download
+
+  update:
+    cmds:
+      - go get -u ./...
+
+  fmt:
+    cmds:
+      - goimports -w .
+
+  test:
+    cmds:
+      - go test ./...
