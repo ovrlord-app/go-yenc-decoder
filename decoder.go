@@ -10,7 +10,6 @@ package yenc
 
 import (
 	"fmt"
-	"hash"
 	"hash/crc32"
 	"io"
 	"strconv"
@@ -23,7 +22,7 @@ type Decoder struct {
 	h    Header
 	r    io.Reader
 	b    *ringbuffer.Buffer
-	hash hash.Hash32
+	crc  uint32
 	s    int // state
 	done bool
 
@@ -38,7 +37,7 @@ func Decode(r io.Reader, options ...DecodeOption) (decoder *Decoder, err error) 
 		DecodeWithBufferSize(BufferLimit)(d)
 	}
 	d.r = r
-	d.hash = crc32.NewIEEE()
+	d.crc = 0
 	if err = d.readHeader(); err != nil {
 		return
 	}
@@ -134,7 +133,7 @@ func (d *Decoder) Read(b []byte) (n int, err error) {
 			b[i] -= 42
 		}
 		d.sizeDecoded += uint64(n)
-		d.hash.Write(b[:n])
+		d.crc = crc32.Update(d.crc, crc32.IEEETable, b[:n])
 	}
 	if hasEnd {
 		if err = d.consumeEnd(); err != nil {
@@ -188,7 +187,7 @@ func (d *Decoder) readHeader() (err error) {
 			}
 			d.b.Consume(len(ybegin))
 			for !atEOL {
-				if key, value, atEOL, err = d.readArgument(func(key string) bool { return key == "name" }); err != nil {
+				if key, value, atEOL, err = d.readArgument(readValueToEOLForName); err != nil {
 					return
 				}
 				switch key {
@@ -323,7 +322,7 @@ func (d *Decoder) consumeEnd() (err error) {
 		key, value     string
 		hasSize, atEOL bool
 	)
-	crc32 = d.hash.Sum32()
+	crc32 = d.crc
 	d.b.Consume(len(yend))
 	for !atEOL {
 		if key, value, atEOL, err = d.readArgument(nil); err != nil {
@@ -403,7 +402,7 @@ func (d *Decoder) readArgument(readToEOL func(key string) bool) (key, value stri
 	var token []byte
 
 	// Skip any leading spaces between args
-	if i := d.b.IndexByteFunc(func(c byte) bool { return c != ' ' && c != '\r' && c != '\n' }); i > 0 {
+	if i := d.b.IndexByteFunc(matchNotSPCRLF); i > 0 {
 		d.b.Consume(i)
 	}
 	// If line ends, mark EOL
@@ -544,7 +543,7 @@ func (d *Decoder) readArgument(readToEOL func(key string) bool) (key, value stri
 
 // CRC32 checksum of the preceeding data decoded so far.
 func (d *Decoder) CRC32() uint32 {
-	return d.hash.Sum32()
+	return d.crc
 }
 
 func (d *Decoder) Header() *Header {
@@ -567,6 +566,10 @@ var ybegin = []byte("=ybegin ")
 var ypart = []byte("=ypart ")
 var yend = []byte("=yend ")
 
+func readValueToEOLForName(key string) bool {
+	return key == "name"
+}
+
 func matchCRLF(c byte) bool {
 	return c == '\r' || c == '\n'
 }
@@ -577,6 +580,10 @@ func matchEQCRLF(c byte) bool {
 
 func matchSPCRLF(c byte) bool {
 	return c == ' ' || c == '\r' || c == '\n'
+}
+
+func matchNotSPCRLF(c byte) bool {
+	return c != ' ' && c != '\r' && c != '\n'
 }
 
 func matchNotCRLF(c byte) bool {
